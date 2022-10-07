@@ -4,6 +4,32 @@ Description: |
   Assessment test 2
 
 Resources:
+  S3Bucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      AccessControl: PublicRead
+      BucketName: assessment-2-kaisa
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
+    DeletionPolicy: Retain
+  BucketPolicy:
+    Type: "AWS::S3::BucketPolicy"
+    Properties:
+      PolicyDocument:
+        Id: MyPolicy
+        Version: 2012-10-17
+        Statement:
+          - Sid: PublicReadForGetBucketObjects
+            Effect: Allow
+            Principal: "*"
+            Action: "s3:GetObject"
+            Resource: !Join
+              - ""
+              - - "arn:aws:s3:::"
+                - !Ref S3Bucket
+                - /*
+      Bucket: !Ref S3Bucket
 
   LambdaRole:
     Type: AWS::IAM::Role
@@ -14,11 +40,11 @@ Resources:
             Version: 2012-10-17
             Statement:
               - Action:
-                  - 'logs:CreateLogGroup'
-                  - 'logs:CreateLogStream'
-                  - 'logs:PutLogEvents'
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
                 Resource:
-                  - 'arn:aws:logs:*:*:*'
+                  - "arn:aws:logs:*:*:*"
                 Effect: Allow
       AssumeRolePolicyDocument:
         Version: 2012-10-17
@@ -33,7 +59,7 @@ Resources:
   Lambda:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: 'getFruit'
+      FunctionName: "getFruit"
       Role: !GetAtt LambdaRole.Arn
       Handler: index.handler
       Runtime: nodejs16.x
@@ -69,31 +95,31 @@ Resources:
       IntegrationType: AWS_PROXY
       IntegrationMethod: POST
       PayloadFormatVersion: "2.0"
-      IntegrationUri: !Sub 'arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${Lambda.Arn}/invocations'
+      IntegrationUri: !Sub "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${Lambda.Arn}/invocations"
 
   MyApiGateway:
     Type: AWS::ApiGatewayV2::Api
     Properties:
-      Name: "MyApiGateway"
+      Name: "assessment-2-kaisa"
       ProtocolType: "HTTP"
-      # CorsConfiguration:
-      #   AllowHeaders:
-      #     - Authorization
-      #   AllowMethods:
-      #     - GET
-      #     - POST
-      #     - OPTIONS
-      #   AllowOrigins:
-      #     - '*'
+      CorsConfiguration:
+        AllowHeaders:
+          - Authorization
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        AllowOrigins:
+          - "*"
 
   MyApiGatewayStage:
     Type: AWS::ApiGatewayV2::Stage
     Properties:
       AutoDeploy: true
       DeploymentId: !Ref MyApiGatewayDeployment
-      StageName: '$default'
+      StageName: "$default"
       ApiId: !Ref MyApiGateway
-  
+
   MyApiGatewayDeployment:
     Type: AWS::ApiGatewayV2::Deployment
     DependsOn:
@@ -111,3 +137,10 @@ Resources:
         - /
         - - integrations
           - !Ref LambdaIntegration
+
+Outputs:
+  WebsiteURL:
+    Value: !GetAtt
+      - S3Bucket
+      - WebsiteURL
+    Description: URL for website hosted on S3
